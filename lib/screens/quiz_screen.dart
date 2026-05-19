@@ -15,17 +15,47 @@ class _QuizScreenState extends State<QuizScreen> {
   List<Map<String, dynamic>> questions = [];
   int current = 0;
   int score = 0;
+  bool isLoading = true;
+  String? error;
 
   @override
   void initState() {
     super.initState();
-    db.child('quizzes/${widget.lessonId}/questions').once().then((snap) {
-      final data = snap.snapshot.value as List<dynamic>?;
-      if (data == null) return;
-      setState(() {
-        questions = data.map((q) => Map<String, dynamic>.from(q)).toList();
-      });
-    });
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    try {
+      final snap = await db.child('quizzes/${widget.lessonId}/questions').once();
+      final raw = snap.snapshot.value;
+
+      if (raw == null) {
+        setState(() {
+          error = 'No questions added for this lesson yet.';
+          isLoading = false;
+        });
+        return;
+      }
+
+      // Convert from LinkedMap (web) or List (native) to a proper list
+      if (raw is List) {
+        // Native (Android/iOS) returns a list
+        questions = raw.map((q) => Map<String, dynamic>.from(q as Map)).toList();
+      } else if (raw is Map) {
+        // Web returns a map with keys
+        final map = Map<String, dynamic>.from(raw);
+        questions = map.entries.map((entry) {
+          final q = Map<String, dynamic>.from(entry.value as Map);
+          q['id'] = entry.key; // optional: keep the push ID
+          return q;
+        }).toList();
+      } else {
+        error = 'Unexpected data format.';
+      }
+    } catch (e) {
+      error = 'Failed to load questions: $e';
+    }
+    setState(() => isLoading = false);
   }
 
   void _answer(int chosen) {
@@ -40,17 +70,22 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _finishQuiz() {
-    final passed = score >= (questions.length * 0.6); // 60% pass
+    final passed = score >= (questions.length * 0.6).ceil(); // 60% to pass
     final userId = FirebaseAuth.instance.currentUser!.uid;
+
     // Save attempt
     db.child('users/$userId/quizAttempts/${widget.lessonId}').set({
       'passed': passed,
       'score': score,
     });
+
     if (passed) {
-      // Award coins (10 coins per quiz pass)
+      // Award 10 coins
       db.child('users/$userId/coins').set(ServerValue.increment(10));
+      // Mark lesson as completed
+      db.child('users/$userId/completedLessons').push().set(widget.lessonId);
     }
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -59,8 +94,8 @@ class _QuizScreenState extends State<QuizScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context); // back to detail
+              Navigator.pop(context); // close dialog
+              Navigator.pop(context); // back to lesson detail
             },
             child: const Text('OK'),
           ),
@@ -71,7 +106,29 @@ class _QuizScreenState extends State<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (questions.isEmpty) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Quiz')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Text(error!, textAlign: TextAlign.center),
+          ),
+        ),
+      );
+    }
+    if (questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Quiz')),
+        body: Center(child: Text('No questions available.')),
+      );
+    }
+
     final q = questions[current];
     return Scaffold(
       appBar: AppBar(title: Text('Quiz (${current + 1}/${questions.length})')),
@@ -80,11 +137,12 @@ class _QuizScreenState extends State<QuizScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(q['question'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(q['question'],
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             ...List.generate(q['options'].length, (index) {
               return ListTile(
-                title: Text(q['options'][index]),
+                title: Text(q['options'][index] ?? ''),
                 leading: Radio<int>(
                   value: index,
                   groupValue: null,

@@ -12,21 +12,34 @@ class LessonsScreen extends StatefulWidget {
 class _LessonsScreenState extends State<LessonsScreen> {
   final db = FirebaseDatabase.instance.ref().child('lessons');
   List<Map<String, dynamic>> _lessons = [];
+  bool isLoading = true;
+
+  Future<void> _fetchLessons() async {
+    setState(() => isLoading = true);
+    try {
+      final snap = await db.once();
+      // Convert from JavaScript LinkedMap to Dart Map<String, dynamic>
+      final raw = snap.snapshot.value;
+      if (raw != null) {
+        final linkedMap = Map<String, dynamic>.from(raw as Map);
+        _lessons = linkedMap.entries.map((e) {
+          final lesson = Map<String, dynamic>.from(e.value as Map);
+          lesson['id'] = e.key;
+          return lesson;
+        }).toList();
+      } else {
+        _lessons = [];
+      }
+    } catch (e) {
+      debugPrint('Error fetching lessons: $e');
+    }
+    setState(() => isLoading = false);
+  }
 
   @override
   void initState() {
     super.initState();
-    db.onValue.listen((event) {
-      final data = event.snapshot.value as Map<String, dynamic>?;
-      if (data == null) return;
-      setState(() {
-        _lessons = data.entries.map((e) {
-          final lesson = Map<String, dynamic>.from(e.value);
-          lesson['id'] = e.key;
-          return lesson;
-        }).toList();
-      });
-    });
+    _fetchLessons();
   }
 
   @override
@@ -36,43 +49,48 @@ class _LessonsScreenState extends State<LessonsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Forex Lessons')),
-      body: _lessons.isEmpty
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                if (beginner.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('Beginner', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
-                  ...beginner.map((lesson) => ListTile(
-                        title: Text(lesson['title']),
-                        trailing: const Icon(Icons.arrow_forward),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LessonDetailScreen(lesson: lesson),
+          : RefreshIndicator(
+              onRefresh: _fetchLessons,
+              child: ListView(
+                children: [
+                  if (beginner.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Beginner',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                    ...beginner.map((l) => ListTile(
+                          title: Text(l['title'] ?? 'No title'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => LessonDetailScreen(lesson: l)),
                           ),
-                        ),
-                      )),
-                ],
-                if (intermediate.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('Intermediate', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  ),
-                  ...intermediate.map((lesson) => ListTile(
-                        title: Text(lesson['title']),
-                        trailing: const Icon(Icons.arrow_forward),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => LessonDetailScreen(lesson: lesson),
+                        )),
+                  ],
+                  if (intermediate.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Intermediate',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ),
+                    ...intermediate.map((l) => ListTile(
+                          title: Text(l['title'] ?? 'No title'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => LessonDetailScreen(lesson: l)),
                           ),
-                        ),
-                      )),
+                        )),
+                  ],
+                  if (_lessons.isEmpty && !isLoading)
+                    const Center(child: Text('No lessons yet. Add some from Admin Panel.')),
                 ],
-              ],
+              ),
             ),
     );
   }

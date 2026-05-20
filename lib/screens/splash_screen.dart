@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../widgets/disclaimer_dialog.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
@@ -18,8 +19,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuthState() async {
+    // Show splash for at least 2 seconds
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
+
+    // Show the risk disclaimer (only once per app launch)
+    await DisclaimerDialog.show(context);
+    if (!mounted) return;
+
+    // Navigate based on authentication state
     final user = FirebaseAuth.instance.currentUser;
     Navigator.pushReplacement(
       context,
@@ -38,8 +46,10 @@ class _SplashScreenState extends State<SplashScreen> {
           children: const [
             Icon(Icons.school, size: 100, color: Colors.blue),
             SizedBox(height: 24),
-            Text('Forex Learn',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            Text(
+              'Forex Learn',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 8),
             CircularProgressIndicator(),
           ],

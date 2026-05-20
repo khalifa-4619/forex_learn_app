@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import '../theme/colors.dart';
 
 class QuizScreen extends StatefulWidget {
   final String lessonId;
@@ -89,7 +90,7 @@ class _QuizScreenState extends State<QuizScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(passed ? 'Congratulations!' : 'Try Again'),
+        title: Text(passed ? 'Congratulations! 🎉' : 'Keep Trying! 💪'),
         content: Text('You scored $score/${questions.length}'),
         actions: [
           TextButton(
@@ -124,34 +125,71 @@ class _QuizScreenState extends State<QuizScreen> {
     }
     if (questions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: Text('Quiz')),
-        body: Center(child: Text('No questions available.')),
+        appBar: AppBar(title: const Text('Quiz')),
+        body: const Center(child: Text('No questions available.')),
       );
     }
 
     final q = questions[current];
     return Scaffold(
-      appBar: AppBar(title: Text('Quiz (${current + 1}/${questions.length})')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(q['question'],
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            ...List.generate(q['options'].length, (index) {
-              return ListTile(
-                title: Text(q['options'][index] ?? ''),
-                leading: Radio<int>(
-                  value: index,
-                  groupValue: null,
-                  onChanged: (_) => _answer(index),
-                ),
-              );
-            }),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text('Quiz (${current + 1}/${questions.length})'),
+      ),
+      body: Column(
+        children: [
+          // Progress bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: LinearProgressIndicator(
+              value: (current + 1) / questions.length,
+              backgroundColor: Colors.grey[300],
+              color: AppColors.primary,
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    q['question'],
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark),
+                  ),
+                  const SizedBox(height: 20),
+                  ...List.generate(q['options'].length, (index) {
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _answer(index),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.circle_outlined,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  q['options'][index] ?? '',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

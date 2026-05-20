@@ -61,15 +61,14 @@ class _LessonsScreenState extends State<LessonsScreen> {
                       child: Text('Beginner',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     ),
-                    ...beginner.map((l) => ListTile(
-                          title: Text(l['title'] ?? 'No title'),
-                          trailing: const Icon(Icons.arrow_forward),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => LessonDetailScreen(lesson: l)),
-                          ),
-                        )),
+                    ...beginner.map((l) => Card(
+                      child: ListTile(
+                        title: Text(l['title'] ?? 'No title', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(l['category'] ?? ''),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LessonDetailScreen(lesson: l))),
+                      ),
+                    )),
                   ],
                   if (intermediate.isNotEmpty) ...[
                     const Padding(
@@ -77,15 +76,14 @@ class _LessonsScreenState extends State<LessonsScreen> {
                       child: Text('Intermediate',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     ),
-                    ...intermediate.map((l) => ListTile(
-                          title: Text(l['title'] ?? 'No title'),
-                          trailing: const Icon(Icons.arrow_forward),
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => LessonDetailScreen(lesson: l)),
-                          ),
-                        )),
+                    ...intermediate.map((l) => Card(
+                      child: ListTile(
+                        title: Text(l['title'] ?? 'No title', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(l['category'] ?? ''),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LessonDetailScreen(lesson: l))),
+                      ),
+                    )),
                   ],
                   if (_lessons.isEmpty && !isLoading)
                     const Center(child: Text('No lessons yet. Add some from Admin Panel.')),

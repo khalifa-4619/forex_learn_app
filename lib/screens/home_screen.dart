@@ -5,6 +5,7 @@ import '../theme/colors.dart';
 import 'login_screen.dart';
 import 'lessons_screen.dart';
 import 'admin_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,11 +29,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final data = Map<String, dynamic>.from(raw as Map);
       setState(() {
         coins = data['coins'] ?? 0;
-        completed = data['completedLessons'] != null
-            ? (data['completedLessons'] as List).length
-            : 0;
+        completed = _parseCompletedCount(data['completedLessons']);
       });
     });
+  }
+
+  int _parseCompletedCount(dynamic value) {
+    if (value == null) return 0;
+    if (value is List) return value.length;
+    if (value is Map) return value.keys.length; // old push-based format
+    return 0;
   }
 
   @override
@@ -41,14 +47,28 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Forex Learn'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-            },
-          ),
-        ],
+        IconButton(
+          icon: const Icon(Icons.person),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () async {
+            await FirebaseAuth.instance.signOut();
+            if (mounted) {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            }
+          },
+        ),
+      ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),

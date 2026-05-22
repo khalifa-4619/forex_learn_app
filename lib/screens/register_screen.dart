@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -13,22 +14,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
   final nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final db = FirebaseDatabase.instance.ref();
 
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: emailController.text.trim(),
           password: passwordController.text.trim(),
         );
-        // Optionally save user data to Realtime DB (we'll do later)
+        // Save user info to Realtime Database
+        final userId = userCredential.user!.uid;
+        await db.child('users/$userId').set({
+          'name': nameController.text.trim().isNotEmpty
+              ? nameController.text.trim()
+              : 'Trader',
+          'email': emailController.text.trim(),
+          'coins': 0,
+          'completedLessons': [],
+        });
         if (mounted) {
           Navigator.pop(context); // back to login screen
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString())),
+          );
+        }
       }
     }
   }
